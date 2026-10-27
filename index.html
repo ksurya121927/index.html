@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Foodnati | Route Animation</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:white}
+#foodnatiScene{position:fixed;inset:0;display:grid;place-items:center;background:#fff}
+.map-viewport{position:relative;width:min(78vw,320px);height:min(78vw,320px);max-height:43vh;overflow:hidden;-webkit-mask-image:radial-gradient(ellipse 66% 66% at center,#000 49%,transparent 100%);mask-image:radial-gradient(ellipse 66% 66% at center,#000 49%,transparent 100%)}
+.map-world{position:absolute;left:0;top:0;width:800px;height:800px;will-change:transform}
+.road{position:absolute;background:#e9e9ec}
+.road.main-v{left:375px;top:0;width:50px;height:800px;background:linear-gradient(90deg,#f1f1f3,#e6e6e9,#f1f1f3)}
+.road.main-h{left:375px;top:375px;width:425px;height:50px;background:linear-gradient(0deg,#f1f1f3,#e6e6e9,#f1f1f3)}
+.road.side{background:#e0e0e3}
+.bike{position:absolute;left:50%;top:50%;width:64px;height:86px;object-fit:contain;transform:translate(-50%,-50%);transform-origin:center;filter:drop-shadow(0 2px 2px #0002);will-change:transform}
+@media(max-width:400px){.bike{width:56px;height:76px}}
+</style>
+</head>
+<body>
+<div id="foodnatiScene"><div class="map-viewport" id="viewport">
+  <div class="map-world" id="mapWorld">
+    <div class="road main-v"></div>
+    <div class="road main-h"></div>
+    <div class="road side" style="left:170px;top:0;width:7px;height:350px"></div>
+    <div class="road side" style="left:600px;top:0;width:7px;height:350px"></div>
+    <div class="road side" style="left:0;top:175px;width:350px;height:7px"></div>
+    <div class="road side" style="left:0;top:595px;width:350px;height:7px"></div>
+    <div class="road side" style="left:485px;top:560px;width:260px;height:7px"></div>
+    <div class="road side" style="left:210px;top:475px;width:165px;height:7px"></div>
+  </div>
+  <img class="bike" id="bike" src="bike.png" alt="Foodnati pink delivery scooter" draggable="false">
+</div></div>
+<script>
+(()=>{
+ const world=document.getElementById('mapWorld');
+ const bike=document.getElementById('bike');
+ const viewport=document.getElementById('viewport');
+ // The actual map route is: vertical road x=400, then horizontal road y=400.
+ // Bike image points UP. Rotate clockwise to face RIGHT at the junction.
+ const startY=610, junctionY=400, endX=680, centerX=400;
+ const radius=26;
+ const segments=[
+  {type:'straight',length:startY-(junctionY+radius)},
+  {type:'turn',length:Math.PI*radius/2},
+  {type:'straight',length:endX-(centerX+radius)}
+ ];
+ const total=segments.reduce((s,v)=>s+v.length,0);
+ const duration=8500;
+ let began=null;
+ function frame(time){
+  if(began===null)began=time;
+  const progress=((time-began)%duration)/duration;
+  const distance=progress*total;
+  let x,y,angle;
+  if(distance<segments[0].length){
+    x=centerX;y=startY-distance;angle=0;
+  }else if(distance<segments[0].length+segments[1].length){
+    const d=distance-segments[0].length;
+    const theta=d/radius;
+    x=centerX+radius*(1-Math.cos(theta));
+    y=junctionY+radius-radius*Math.sin(theta);
+    angle=theta*180/Math.PI;
+  }else{
+    const d=distance-segments[0].length-segments[1].length;
+    x=centerX+radius+d;y=junctionY;angle=90;
+  }
+  const w=viewport.clientWidth,h=viewport.clientHeight;
+  // Translate map by EXACT rider position: no drifting off the roads.
+  world.style.transform=`translate3d(${w/2-x}px,${h/2-y}px,0)`;
+  bike.style.transform=`translate(-50%,-50%) rotate(${angle}deg)`;
+  requestAnimationFrame(frame);
+ }
+ if(!matchMedia('(prefers-reduced-motion: reduce)').matches){requestAnimationFrame(frame)}
+ else {world.style.transform=`translate3d(${viewport.clientWidth/2-centerX}px,${viewport.clientHeight/2-startY}px,0)`}
+})();
+</script>
+</body>
+</html>
